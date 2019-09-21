@@ -19,12 +19,12 @@ variable primary_domain {
 
 variable access_key {
   description = "AWS access key"
-  default = "AKIAXRJUUTMQHWJYBMWN"
+  default = "AWSaccesskey"
 }
 
 variable secret_key {
   description = "AWS secret key"
-  default = "pzJ0LD54XCIunmwPEy79vy4KQ20q9Uo8SJrT7AQT"
+  default = "AWSsecretkey"
 }
 
 variable region {
