@@ -1,0 +1,14 @@
+../user_agents/__init__.py
+../user_agents/__pycache__/__init__.cpython-37.pyc
+../user_agents/__pycache__/compat.cpython-37.pyc
+../user_agents/__pycache__/parsers.cpython-37.pyc
+../user_agents/__pycache__/tests.cpython-37.pyc
+../user_agents/compat.py
+../user_agents/parsers.py
+../user_agents/tests.py
+PKG-INFO
+SOURCES.txt
+dependency_links.txt
+not-zip-safe
+requires.txt
+top_level.txt
