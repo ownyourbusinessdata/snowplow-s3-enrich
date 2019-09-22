@@ -82,15 +82,17 @@ Terraform will create:
 
 * 3 Buckets:
   1. With __lt-src__ suffix. Public accessible for reading. Contains 1x1 pixel image for snowplow POST data.
-  2. With __lt-logs__ suffix. Used for storing: cloudfront logs with __RAW__ prefix, enriched snowplow data with __Converted__ prefix and maxmind GeoLite2 database.
-  3. With __lt-ath__ suffix. Used for storing Athena query results.
+  2. With __lt-logs__ suffix. Using for storing: cloudfront logs with __RAW__ prefix, enriched snowplow data with __Converted__ prefix and maxmind GeoLite2 database.
+  3. With __lt-ath__ suffix. Using for storing Athena query results.
 
 * Cloudfront distribution with __lt-src__ bucket as target and __lt-logs__ bucket for logs storing.
 
-* Lambda function wich triggers on any __lt-logs__ bucket object creation with prefix __RAW__ amd suffix __.gz__.
+* Lambda function wich triggers on any __lt-logs__ bucket object creation with prefix __RAW__ and suffix __.gz__.
 
 * Athena workgroup with suffix __wg__
 
 * Athena database with prefix __eventsdb__
 
 * Athena saved query with name __events__
+
+To complete infrastructure deployment run created saved athena query in created workgroup, it will create table with enriched snowplow events.
