@@ -96,3 +96,27 @@ Terraform will create:
 * Athena saved query with name __events__
 
 To complete infrastructure deployment run created saved athena query in created workgroup, it will create table with enriched snowplow events.
+
+# Configuring snowplow pixel tracker
+
+Snowplow pixel tracker code looks like:
+
+```javascript
+<script type="text/javascript">
+  ;(function(p,l,o,w,i,n,g){if(!p[i]){p.GlobalSnowplowNamespace=p.GlobalSnowplowNamespace||[];
+  p.GlobalSnowplowNamespace.push(i);p[i]=function(){(p[i].q=p[i].q||[]).push(arguments)
+  };p[i].q=p[i].q||[];n=l.createElement(o);g=l.getElementsByTagName(o)[0];n.async=1;
+  n.src=w;g.parentNode.insertBefore(n,g)}}(window,document,"script","//d1fc8wv8zag5ca.cloudfront.net/2.6.2/sp.js","snowplow"));
+
+  window.snowplow('newTracker', 'cf', 'dolaqvbw76wrx.cloudfront.net', {
+    appId: 'site',
+    cookieDomain: 'bostata.com',
+  });
+  window.snowplow('enableActivityTracking', 1, 5);
+  window.snowplow('trackPageView');
+  window.snowplow('enableLinkClickTracking');
+  window.snowplow('enableFormTracking');
+</script>
+```
+
+You have to change __window.snowplow__ cloudfront domain name to created cloudfront domain name and add code on pages you wanted to track with snowplow.
