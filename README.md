@@ -81,7 +81,7 @@ terraform apply
 Terraform will create:
 
 * 3 Buckets:
-  1. With __lt-src__ suffix. Public accessible for reading. Contains 1x1 pixel image for snowplow POST data.
+  1. With __lt-src__ suffix. Public accessible for reading. Contains 1x1 pixel image for snowplow GET data.
   2. With __lt-logs__ suffix. Using for storing: cloudfront logs with __RAW__ prefix, enriched snowplow data with __Converted__ prefix and maxmind GeoLite2 database.
   3. With __lt-ath__ suffix. Using for storing Athena query results.
 
@@ -120,3 +120,11 @@ Snowplow pixel tracker code looks like:
 ```
 
 You have to change __window.snowplow__ cloudfront domain name to created cloudfront domain name and add code on pages you wanted to track with snowplow.
+
+# How it works
+
+Each time a page is loaded, the browser requests a __sp.js__ script. It's collects data from endpoint device.
+
+All data compiles in GET request. Pixel tracker run that request to cloudfront distribution. Request string logs with cloudfront.
+
+Log file puts into __lt-logs__ bucket. Lambda function start to porocess new data, enrich it according [snowplow event model](https://github.com/snowplow/snowplow/wiki/canonical-event-model) and put enriched data in Converted folder.
