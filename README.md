@@ -119,15 +119,15 @@ Snowplow pixel tracker code looks like:
 </script>
 ```
 
-You have to change __window.snowplow__ cloudfront domain name to created cloudfront domain name and add code on pages you wanted to track with snowplow.
+You have to change cloudfront domain name in __window.snowplow__ fuction to the created cloudfront domain name and add code the code above on web pages you want to track with snowplow.
 
 # How it works
 
 Each time a page is loaded, the browser requests a __sp.js__ script. It's collects data from endpoint device.
 
-All data compiles in GET request. Pixel tracker run that request to cloudfront distribution. Request string logs with cloudfront.
+All data compiles in GET request. Pixel tracker runs that request to cloudfront distribution. Request string logs with cloudfront.
 
-Log file puts into __lt-logs__ bucket. Lambda function start to porocess new data, enrich it according [snowplow event model](https://github.com/snowplow/snowplow/wiki/canonical-event-model) and put enriched data in Converted folder.
+Log file puts into __lt-logs__ bucket. Lambda function starts to process new data, enrich it according [snowplow event model](https://github.com/snowplow/snowplow/wiki/canonical-event-model) and puts enriched data in Converted folder.
 
 # Infrastructure termination
 
@@ -137,4 +137,4 @@ To delete infrastructure inside repo directory run:
 terraform destroy
 ```
 
-There may be errors while deleting some components because it consists data not created by terraform. You should delete these components manually.
+There may be errors while deleting some components because there is data not created by terraform. You should delete these components manually.
