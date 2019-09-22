@@ -128,3 +128,13 @@ Each time a page is loaded, the browser requests a __sp.js__ script. It's collec
 All data compiles in GET request. Pixel tracker run that request to cloudfront distribution. Request string logs with cloudfront.
 
 Log file puts into __lt-logs__ bucket. Lambda function start to porocess new data, enrich it according [snowplow event model](https://github.com/snowplow/snowplow/wiki/canonical-event-model) and put enriched data in Converted folder.
+
+# Infrastructure termination
+
+To delete infrastructure inside repo directory run:
+
+```bash
+terraform destroy
+```
+
+There may be errors while deleting some components because it consists data not created by terraform. You should delete these components manually.
