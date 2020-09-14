@@ -246,9 +246,13 @@ def lambda_handler(event, context):
                    spvalues['ti_currency'] = sp[1]
                 if sp[0] == 'evn':
                    spvalues['event_vendor'] = sp[1]
+            
+            # Using intermediary newline variable to improve performance and memory usage
+            new_line = ''
             for key,val in spvalues.items():
-                datvalues = datvalues + str(val) + '\t'
-            datvalues = datvalues + '\n'
+                        new_line += str(val) + '\t'
+                datvalues += new_line + '\n'
+
     if len(urispltnodes[0]) > 5:
         gz_body = BytesIO()
         gz = gzip.GzipFile(None, 'wb', 9, gz_body)
