@@ -93,20 +93,36 @@ def lambda_handler(event, context):
         dvce_ismobile = userag.is_mobile
         
         user_ipaddress = l[4]
-        geoipdbresult = geoipdbreader.city(l[4])
-        geo_country = geoipdbresult.registered_country.iso_code
+
+        #### We determine geolocation info based on user IP.
+        #### Set to empty string if no info available on DB
         try:
-            geo_city = geoipdbresult.city.names['en']
+            geoipdbresult = geoipdbreader.city(l[4])
+            geo_country = geoipdbresult.registered_country.iso_code
+            if geo_country is None:
+                geo_country = ''
+            try:
+                 geo_city = geoipdbresult.city.names['en']
+            except:
+                geo_city = '-'
+            geo_zipcode = geoipdbresult.postal.code
+            geo_latitude = geoipdbresult.location.latitude
+            geo_longitude = geoipdbresult.location.longitude
+            try:
+                geo_region_name = geoipdbresult.subdivisions[0].names['en']
+            except:
+                geo_region_name = '-'
+            geo_timezone = geoipdbresult.location.time_zone
         except:
-            geo_city = '-'
-        geo_zipcode = geoipdbresult.postal.code
-        geo_latitude = geoipdbresult.location.latitude
-        geo_longitude = geoipdbresult.location.longitude
-        try:
-            geo_region_name = geoipdbresult.subdivisions[0].names['en']
-        except:
-            geo_region_name = '-'
-        geo_timezone = geoipdbresult.location.time_zone
+            geo_country = ''
+            geo_city = ''
+            geo_zipcode = ''
+            geo_latitude = ''
+            geo_longitude = ''
+            geo_region_name = ''
+            geo_timezone = ''
+
+        
         urisplt = re.compile(r'([^&]*)&*')
         urispltnodes = urisplt.findall(l[11])[:-1]
 
