@@ -4,11 +4,15 @@ from requests import get
 
 import geoip2.database
 import datetime
+import hashlib
 import tarfile
 import logging
 import boto3
 import gzip
 import re
+
+
+hash_ips = False # Set to true if you want to hash IPs instead of storing plain IPs in your final database or data lake
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -105,6 +109,10 @@ def lambda_handler(event, context):
         geo_timezone = geoipdbresult.location.time_zone
         urisplt = re.compile(r'([^&]*)&*')
         urispltnodes = urisplt.findall(l[11])[:-1]
+
+        if hash_ips:
+            user_ipaddress = hashlib.sha224(user_ipaddress.encode('utf-8')).hexdigest() # We store the IP as a hash for privacy
+
         spvalues = {'app_id': '-','platform': '-','collector_tstamp': collector_tstamp,'dvce_created_tstamp': '-','event': '-','event_id': '-','txn_id': '-','name_tracker': '-','v_tracker': '-','user_id': '-','user_ipaddress': user_ipaddress,'user_fingerprint': '-','domain_userid': '-','domain_sessionidx': '-','network_userid': '-','geo_country': geo_country,'geo_city': geo_city,'geo_zipcode': geo_zipcode,'geo_latitude': geo_latitude,'geo_longitude': geo_longitude,'geo_region_name': geo_region_name,'page_url': '-','page_title': '-','page_referrer': '-','refr_urlscheme': refr_urlscheme,'refr_urlhost': refr_urlhost,'refr_urlpath': refr_urlpath,'refr_urlquery': refr_urlquery,'se_category': '-','se_action': '-','se_label': '-','se_property': '-','se_value': '-','unstruct_event': '-','tr_orderid': '-','tr_affiliation': '-','tr_total': '-','tr_tax': '-','tr_shipping': '-','tr_city': '-','tr_state': '-','tr_country': '-','ti_orderid': '-','ti_sku': '-','ti_name': '-','ti_category': '-','ti_price': '-','ti_quantity': '-','pp_xoffset_min': '-','pp_xoffset_max': '-','pp_yoffset_min': '-','pp_yoffset_max': '-','useragent': useragent,'br_name': br_name,'br_family': br_family,'br_version': br_version,'br_lang': '-','br_features_pdf': '-','br_features_flash': '-','br_features_java': '-','br_features_director': '-','br_features_quicktime': '-','br_features_realplayer': '-','br_features_windowsmedia': '-','br_features_gears': '-','br_features_silverlight': '-','br_cookies': '-','br_colordepth': '-','br_viewwidth': '-','br_viewheight': '-','os_family': os_family,'os_timezone': '-','dvce_type': dvce_type,'dvce_ismobile': dvce_ismobile,'dvce_screenwidth': '-','dvce_screenheight': '-','doc_charset': '-','doc_width': '-','doc_height': '-','tr_currency': '-','ti_currency': '-','geo_timezone': geo_timezone,'dvce_sent_tstamp': '-','domain_sessionid': '-','event_vendor': '-'}
         if len(urispltnodes[0]) > 5:
             for spparams in urispltnodes:
