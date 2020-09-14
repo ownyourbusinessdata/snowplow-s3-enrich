@@ -13,6 +13,7 @@ import re
 
 
 hash_ips = False # Set to true if you want to hash IPs instead of storing plain IPs in your final database or data lake
+# Default is False for retrocompatibility, although hashing is encouraged.
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -122,7 +123,12 @@ def lambda_handler(event, context):
             geo_region_name = ''
             geo_timezone = ''
 
-        
+        # In the rare case latitudes and longitudes are set to None, we reset them to '' (later NULL) to avoid potential insertion errors depending on the final DB system used
+        if geo_latitude is None:
+            geo_latitude = ''
+        if geo_longitude is None:
+            geo_longitude = ''
+
         urisplt = re.compile(r'([^&]*)&*')
         urispltnodes = urisplt.findall(l[11])[:-1]
 
