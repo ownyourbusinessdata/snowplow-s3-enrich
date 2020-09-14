@@ -53,6 +53,10 @@ def lambda_handler(event, context):
     header = re.search ('#Fields: (.*)',lines[1].decode("utf-8"))
     header = header.group(1).split()
     datvalues = ""
+    
+    # Reading Geo IP database
+    geoipdbreader = geoip2.database.Reader(geoippath)
+
     for l in lines[2:-1]:
         r = re.compile(r'([^\t]*)\t*')
         l = r.findall(l.decode("utf-8"))[:-1]
@@ -83,7 +87,7 @@ def lambda_handler(event, context):
         os_family = userag.os.family
         dvce_type = userag.device.family
         dvce_ismobile = userag.is_mobile
-        geoipdbreader = geoip2.database.Reader(geoippath)
+        
         user_ipaddress = l[4]
         geoipdbresult = geoipdbreader.city(l[4])
         geo_country = geoipdbresult.registered_country.iso_code
