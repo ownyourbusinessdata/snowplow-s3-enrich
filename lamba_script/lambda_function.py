@@ -4,11 +4,16 @@ from requests import get
 
 import geoip2.database
 import datetime
+import hashlib
 import tarfile
 import logging
 import boto3
 import gzip
 import re
+
+
+hash_ips = False # Set to true if you want to hash IPs instead of storing plain IPs in your final database or data lake
+# Default is False for retrocompatibility, although hashing is encouraged.
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -53,6 +58,10 @@ def lambda_handler(event, context):
     header = re.search ('#Fields: (.*)',lines[1].decode("utf-8"))
     header = header.group(1).split()
     datvalues = ""
+    
+    # Reading Geo IP database
+    geoipdbreader = geoip2.database.Reader(geoippath)
+
     for l in lines[2:-1]:
         r = re.compile(r'([^\t]*)\t*')
         l = r.findall(l.decode("utf-8"))[:-1]
@@ -83,25 +92,50 @@ def lambda_handler(event, context):
         os_family = userag.os.family
         dvce_type = userag.device.family
         dvce_ismobile = userag.is_mobile
-        geoipdbreader = geoip2.database.Reader(geoippath)
+        
         user_ipaddress = l[4]
-        geoipdbresult = geoipdbreader.city(l[4])
-        geo_country = geoipdbresult.registered_country.iso_code
+
+        #### We determine geolocation info based on user IP.
+        #### Set to empty string if no info available on DB
         try:
-            geo_city = geoipdbresult.city.names['en']
+            geoipdbresult = geoipdbreader.city(l[4])
+            geo_country = geoipdbresult.registered_country.iso_code
+            if geo_country is None:
+                geo_country = ''
+            try:
+                 geo_city = geoipdbresult.city.names['en']
+            except:
+                geo_city = '-'
+            geo_zipcode = geoipdbresult.postal.code
+            geo_latitude = geoipdbresult.location.latitude
+            geo_longitude = geoipdbresult.location.longitude
+            try:
+                geo_region_name = geoipdbresult.subdivisions[0].names['en']
+            except:
+                geo_region_name = '-'
+            geo_timezone = geoipdbresult.location.time_zone
         except:
-            geo_city = '-'
-        geo_zipcode = geoipdbresult.postal.code
-        geo_latitude = geoipdbresult.location.latitude
-        geo_longitude = geoipdbresult.location.longitude
-        try:
-            geo_region_name = geoipdbresult.subdivisions[0].names['en']
-        except:
-            geo_region_name = '-'
-        geo_timezone = geoipdbresult.location.time_zone
+            geo_country = ''
+            geo_city = ''
+            geo_zipcode = ''
+            geo_latitude = ''
+            geo_longitude = ''
+            geo_region_name = ''
+            geo_timezone = ''
+
+        # In the rare case latitudes and longitudes are set to None, we reset them to '' (later NULL) to avoid potential insertion errors depending on the final DB system used
+        if geo_latitude is None:
+            geo_latitude = ''
+        if geo_longitude is None:
+            geo_longitude = ''
+
         urisplt = re.compile(r'([^&]*)&*')
         urispltnodes = urisplt.findall(l[11])[:-1]
-        spvalues = {'app_id': '-','platform': '-','collector_tstamp': collector_tstamp,'dvce_created_tstamp': '-','event': '-','event_id': '-','txn_id': '-','name_tracker': '-','v_tracker': '-','user_id': '-','user_ipaddress': user_ipaddress,'user_fingerprint': '-','domain_userid': '-','domain_sessionidx': '-','network_userid': '-','geo_country': geo_country,'geo_city': geo_city,'geo_zipcode': geo_zipcode,'geo_latitude': geo_latitude,'geo_longitude': geo_longitude,'geo_region_name': geo_region_name,'page_url': '-','page_title': '-','page_referrer': '-','refr_urlscheme': refr_urlscheme,'refr_urlhost': refr_urlhost,'refr_urlpath': refr_urlpath,'refr_urlquery': refr_urlquery,'se_category': '-','se_action': '-','se_label': '-','se_property': '-','se_value': '-','unstruct_event': '-','tr_orderid': '-','tr_affiliation': '-','tr_total': '-','tr_tax': '-','tr_shipping': '-','tr_city': '-','tr_state': '-','tr_country': '-','ti_orderid': '-','ti_sku': '-','ti_name': '-','ti_category': '-','ti_price': '-','ti_quantity': '-','pp_xoffset_min': '-','pp_xoffset_max': '-','pp_yoffset_min': '-','pp_yoffset_max': '-','useragent': useragent,'br_name': br_name,'br_family': br_family,'br_version': br_version,'br_lang': '-','br_features_pdf': '-','br_features_flash': '-','br_features_java': '-','br_features_director': '-','br_features_quicktime': '-','br_features_realplayer': '-','br_features_windowsmedia': '-','br_features_gears': '-','br_features_silverlight': '-','br_cookies': '-','br_colordepth': '-','br_viewwidth': '-','br_viewheight': '-','os_family': os_family,'os_timezone': '-','dvce_type': dvce_type,'dvce_ismobile': dvce_ismobile,'dvce_screenwidth': '-','dvce_screenheight': '-','doc_charset': '-','doc_width': '-','doc_height': '-','tr_currency': '-','ti_currency': '-','geo_timezone': geo_timezone,'dvce_sent_tstamp': '-','domain_sessionid': '-','event_vendor': '-'}
+
+        if hash_ips:
+            user_ipaddress = hashlib.sha224(user_ipaddress.encode('utf-8')).hexdigest() # We store the IP as a hash for privacy
+
+        spvalues = {'app_id': '-','platform': '-','collector_tstamp': collector_tstamp,'dvce_created_tstamp': '-','event': '-','event_id': '-','txn_id': '-','name_tracker': '-','v_tracker': '-','user_id': '-','user_ipaddress': user_ipaddress,'user_fingerprint': '-','domain_userid': '-','domain_sessionidx': '-','network_userid': '-','geo_country': geo_country,'geo_city': geo_city,'geo_zipcode': geo_zipcode,'geo_latitude': geo_latitude,'geo_longitude': geo_longitude,'geo_region_name': geo_region_name,'page_url': '-','page_title': '-','page_referrer': '-','refr_urlscheme': refr_urlscheme,'refr_urlhost': refr_urlhost,'refr_urlpath': refr_urlpath,'refr_urlquery': refr_urlquery,'se_category': '-','se_action': '-','se_label': '-','se_property': '-','se_value': '-','unstruct_event': '-','tr_orderid': '-','tr_affiliation': '-','tr_total': '-','tr_tax': '-','tr_shipping': '-','tr_city': '-','tr_state': '-','tr_country': '-','ti_orderid': '-','ti_sku': '-','ti_name': '-','ti_category': '-','ti_price': '-','ti_quantity': '-','pp_xoffset_min': '-','pp_xoffset_max': '-','pp_yoffset_min': '-','pp_yoffset_max': '-','useragent': unquote(unquote(useragent)),'br_name': br_name,'br_family': br_family,'br_version': br_version,'br_lang': '-','br_features_pdf': '-','br_features_flash': '-','br_features_java': '-','br_features_director': '-','br_features_quicktime': '-','br_features_realplayer': '-','br_features_windowsmedia': '-','br_features_gears': '-','br_features_silverlight': '-','br_cookies': '-','br_colordepth': '-','br_viewwidth': '-','br_viewheight': '-','os_family': os_family,'os_timezone': '-','dvce_type': dvce_type,'dvce_ismobile': dvce_ismobile,'dvce_screenwidth': '-','dvce_screenheight': '-','doc_charset': '-','doc_width': '-','doc_height': '-','tr_currency': '-','ti_currency': '-','geo_timezone': geo_timezone,'dvce_sent_tstamp': '-','domain_sessionid': '-','event_vendor': '-'}
         if len(urispltnodes[0]) > 5:
             for spparams in urispltnodes:
                 spsplitter = re.compile(r'([^=]*)=*')
@@ -111,7 +145,7 @@ def lambda_handler(event, context):
                 if sp[0] == 'e':
                    spvalues['event'] = sp[1]
                 if sp[0] == 'url':
-                   spvalues['page_url'] = sp[1]
+                   spvalues['page_url'] = unquote(unquote(sp[1]))
                 if sp[0] == 'page':
                    spvalues['page_title'] = sp[1]
                 if sp[0] == 'pp_mix':
@@ -131,7 +165,7 @@ def lambda_handler(event, context):
                 if sp[0] == 'p':
                    spvalues['platform'] = sp[1]
                 if sp[0] == 'tz':
-                   spvalues['os_timezone'] = sp[1]
+                   spvalues['os_timezone'] = unquote(unquote(sp[1]))
                 if sp[0] == 'lang':
                    spvalues['br_lang'] = sp[1]
                 if sp[0] == 'cs':
@@ -191,7 +225,7 @@ def lambda_handler(event, context):
                 if sp[0] == 'ue_px':
                    spvalues['unstruct_event'] = sp[1]
                 if sp[0] == 'refr':
-                   spvalues['page_referrer'] = sp[1]
+                   spvalues['page_referrer'] = unquote(unquote(sp[1]))
                 if sp[0] == 'tid':
                    spvalues['txn_id'] = sp[1]
                 if sp[0] == 'uid':
@@ -242,9 +276,13 @@ def lambda_handler(event, context):
                    spvalues['ti_currency'] = sp[1]
                 if sp[0] == 'evn':
                    spvalues['event_vendor'] = sp[1]
+            
+            # Using intermediary newline variable to improve performance and memory usage
+            new_line = ''
             for key,val in spvalues.items():
-                datvalues = datvalues + str(val) + '\t'
-            datvalues = datvalues + '\n'
+                        new_line += str(val) + '\t'
+                datvalues += new_line + '\n'
+
     if len(urispltnodes[0]) > 5:
         gz_body = BytesIO()
         gz = gzip.GzipFile(None, 'wb', 9, gz_body)
